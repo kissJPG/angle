@@ -1,4 +1,4 @@
-name: Build ANGLE for Android ARM64 (Optimized, No Docker)
+name: Build ANGLE (Android ARM64) - libGLESv2_angle & libEGL_angle
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04          # 固定版本，避免 24.04 缺少 python3-distutils
+    runs-on: ubuntu-22.04
     timeout-minutes: 180
 
     env:
@@ -28,7 +28,6 @@ jobs:
             xz-utils \
             ccache \
             lsb-release
-          # 确保 python 命令可用
           sudo ln -sf /usr/bin/python3 /usr/bin/python
 
       - name: Cache depot_tools
@@ -79,7 +78,7 @@ jobs:
           restore-keys: |
             ccache-android-arm64-
 
-      - name: Configure GN for Android ARM64
+      - name: Configure GN for Android ARM64 (with angle suffix)
         run: |
           cd angle
           gn gen out/Android --args='
@@ -91,18 +90,20 @@ jobs:
             angle_enable_vulkan = true
             angle_enable_gl = true
             angle_enable_egl = true
+            angle_egl_suffix = "_angle"
+            angle_glesv2_suffix = "_angle"
             cc_wrapper = "ccache"
           '
 
-      - name: Build ANGLE
+      - name: Build only required ANGLE libraries
         run: |
           cd angle
-          autoninja -C out/Android
+          autoninja -C out/Android libGLESv2_angle libEGL_angle
 
-      - name: Upload built libraries
+      - name: Upload ANGLE libraries
         uses: actions/upload-artifact@v4
         with:
-          name: angle-android-arm64
+          name: angle-android-arm64-libs
           path: |
-            angle/out/Android/lib*.so
-            angle/out/Android/*.a
+            angle/out/Android/libGLESv2_angle.so
+            angle/out/Android/libEGL_angle.so
