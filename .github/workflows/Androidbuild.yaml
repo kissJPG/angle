@@ -98,7 +98,7 @@ jobs:
       - name: Build only required ANGLE libraries
         run: |
           cd angle
-          autoninja -C out/Android libGLESv2_angle libEGL_angle
+          autoninja -C out/Android libGLESv2_angle.so libEGL_angle.so
 
       - name: Upload ANGLE libraries
         uses: actions/upload-artifact@v4
