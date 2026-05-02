@@ -1,4 +1,4 @@
-name: Build ANGLE for Android ARM64 (Optimized Docker)
+name: Build ANGLE for Android ARM64 (Optimized, No Docker)
 
 on:
   push:
@@ -9,39 +9,34 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    # 使用 ubuntu:22.04 容器以确保 python3-distutils 等依赖可用
-    container:
-      image: ubuntu:22.04
-      options: --user root
+    runs-on: ubuntu-22.04          # 固定版本，避免 24.04 缺少 python3-distutils
     timeout-minutes: 180
 
     env:
-      DEPOT_TOOLS_PATH: /__w/depot_tools
-      # 抑制 gclient 的 git 版本警告
+      DEPOT_TOOLS_PATH: ${{ github.workspace }}/depot_tools
       GCLIENT_SUPPRESS_GIT_VERSION_WARNING: 1
-      # ccache 缓存目录
-      CCACHE_DIR: /root/.ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
 
     steps:
-      - name: Install system dependencies
+      - name: Install base system dependencies
         run: |
-          apt-get update
-          apt-get install -y \
+          sudo apt-get update
+          sudo apt-get install -y \
             curl git python3 python3-distutils python3-setuptools \
             default-jdk \
             ninja-build \
             xz-utils \
             ccache \
             lsb-release
-          ln -s /usr/bin/python3 /usr/bin/python
+          # 确保 python 命令可用
+          sudo ln -sf /usr/bin/python3 /usr/bin/python
 
       - name: Cache depot_tools
         id: cache-depot-tools
         uses: actions/cache@v4
         with:
           path: ${{ env.DEPOT_TOOLS_PATH }}
-          key: depot_tools-${{ runner.os }}-docker-v1
+          key: depot_tools-${{ runner.os }}-v1
 
       - name: Get depot_tools
         if: steps.cache-depot-tools.outputs.cache-hit != 'true'
@@ -71,7 +66,6 @@ jobs:
         run: |
           gclient sync --no-history --shallow --jobs $(nproc)
 
-      # 运行官方推荐的依赖安装脚本
       - name: Install build dependencies (official script)
         run: |
           cd angle
