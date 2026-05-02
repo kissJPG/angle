@@ -10,6 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # 使用 ubuntu:22.04 容器以确保 python3-distutils 等依赖可用
     container:
       image: ubuntu:22.04
       options: --user root
@@ -17,9 +18,9 @@ jobs:
 
     env:
       DEPOT_TOOLS_PATH: /__w/depot_tools
-      ANGLE_SRC: /__w/angle
+      # 抑制 gclient 的 git 版本警告
       GCLIENT_SUPPRESS_GIT_VERSION_WARNING: 1
-      DEPOT_TOOLS_UPDATE: 0           # 禁止 depot_tools 自更新
+      # ccache 缓存目录
       CCACHE_DIR: /root/.ccache
 
     steps:
@@ -31,7 +32,8 @@ jobs:
             default-jdk \
             ninja-build \
             xz-utils \
-            ccache
+            ccache \
+            lsb-release
           ln -s /usr/bin/python3 /usr/bin/python
 
       - name: Cache depot_tools
@@ -62,12 +64,18 @@ jobs:
               "custom_deps" : {},
             },
           ]
-          target_os = ["android"]
+          target_os = ['android']
           EOF
 
       - name: Sync ANGLE source and dependencies
         run: |
           gclient sync --no-history --shallow --jobs $(nproc)
+
+      # 运行官方推荐的依赖安装脚本
+      - name: Install build dependencies (official script)
+        run: |
+          cd angle
+          ./build/install-build-deps.sh
 
       - name: Cache ccache objects
         uses: actions/cache@v4
@@ -80,9 +88,10 @@ jobs:
       - name: Configure GN for Android ARM64
         run: |
           cd angle
-          gn gen out/Android-arm64 --args='
+          gn gen out/Android --args='
             target_os = "android"
             target_cpu = "arm64"
+            arm_control_flow_integrity = "none"
             is_debug = false
             is_component_build = false
             angle_enable_vulkan = true
@@ -94,12 +103,12 @@ jobs:
       - name: Build ANGLE
         run: |
           cd angle
-          autoninja -C out/Android-arm64
+          autoninja -C out/Android
 
       - name: Upload built libraries
         uses: actions/upload-artifact@v4
         with:
           name: angle-android-arm64
           path: |
-            angle/out/Android-arm64/lib*.so
-            angle/out/Android-arm64/*.a
+            angle/out/Android/lib*.so
+            angle/out/Android/*.a
