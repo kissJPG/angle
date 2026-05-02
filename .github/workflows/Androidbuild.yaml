@@ -1,4 +1,4 @@
-name: Build ANGLE for Android ARM64
+name: Build ANGLE for Android ARM64 (Docker)
 
 on:
   push:
@@ -9,36 +9,40 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest          # 使用 x86-64 构建主机（交叉编译）
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+      options: --user root    # 容器内以 root 运行，无需 sudo
     timeout-minutes: 180
 
     env:
-      DEPOT_TOOLS_PATH: ${{ github.workspace }}/depot_tools
-      ANGLE_SRC: ${{ github.workspace }}/angle
+      DEPOT_TOOLS_PATH: /__w/depot_tools    # 容器内默认挂载工作空间为 /__w
+      ANGLE_SRC: /__w/angle
 
     steps:
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            curl git python3 python3-distutils \
+          apt-get update
+          apt-get install -y \
+            curl git python3 python3-distutils python3-setuptools \
             default-jdk \
-            ninja-build
-          # depot_tools 需要直接调用 python
-          sudo ln -s /usr/bin/python3 /usr/bin/python 2>/dev/null || true
+            ninja-build \
+            lsb-release
+          # 保证 python 指向 python3
+          ln -s /usr/bin/python3 /usr/bin/python
 
       - name: Cache depot_tools
+        id: cache-depot-tools
         uses: actions/cache@v4
         with:
           path: ${{ env.DEPOT_TOOLS_PATH }}
-          key: depot_tools-${{ runner.os }}-v2
+          key: depot_tools-${{ runner.os }}-docker-v1
 
       - name: Get depot_tools
         if: steps.cache-depot-tools.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git \
             ${{ env.DEPOT_TOOLS_PATH }}
-        id: cache-depot-tools
 
       - name: Add depot_tools to PATH
         run: echo "${{ env.DEPOT_TOOLS_PATH }}" >> $GITHUB_PATH
