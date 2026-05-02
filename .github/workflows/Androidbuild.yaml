@@ -12,12 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:22.04
-      options: --user root    # 容器内以 root 运行，无需 sudo
+      options: --user root
     timeout-minutes: 180
 
     env:
-      DEPOT_TOOLS_PATH: /__w/depot_tools    # 容器内默认挂载工作空间为 /__w
+      DEPOT_TOOLS_PATH: /__w/depot_tools
       ANGLE_SRC: /__w/angle
+      GCLIENT_SUPPRESS_GIT_VERSION_WARNING: 1   # 忽略 git 版本建议
 
     steps:
       - name: Install system dependencies
@@ -27,8 +28,8 @@ jobs:
             curl git python3 python3-distutils python3-setuptools \
             default-jdk \
             ninja-build \
+            xz-utils \          # 修复：提供 xz 解压支持
             lsb-release
-          # 保证 python 指向 python3
           ln -s /usr/bin/python3 /usr/bin/python
 
       - name: Cache depot_tools
