@@ -1,4 +1,4 @@
-name: Build ANGLE for ZalithLauncher (Android ARM64)
+name: Build ANGLE for Android ARM64 (OpenGL ES 3.1)
 
 on:
   push:
@@ -78,27 +78,24 @@ jobs:
           restore-keys: |
             ccache-android-arm64-
 
-      - name: Configure GN for Android ARM64 (ZalithLauncher optimised)
+      - name: Configure GN for Android ARM64
         run: |
           cd angle
           gn gen out/Android --args='
             target_os = "android"
             target_cpu = "arm64"
-            # 关闭 CFI 以避免与 Minecraft 1.21+ 的安全机制冲突
             arm_control_flow_integrity = "none"
             is_debug = false
             is_component_build = false
-            # Vulkan 后端是 MobileGlues/ZalithLauncher 的必需通道
             angle_enable_vulkan = true
             angle_enable_gl = true
             angle_enable_egl = true
-            # 文件名后缀必须匹配启动器要求
             angle_egl_suffix = "_angle"
             angle_glesv2_suffix = "_angle"
             cc_wrapper = "ccache"
           '
 
-      - name: Build only required ANGLE libraries
+      - name: Build ANGLE (OpenGL ES 3.1 supported by default)
         run: |
           cd angle
           autoninja -C out/Android libGLESv2_angle.so libEGL_angle.so
